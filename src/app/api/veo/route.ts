@@ -572,7 +572,7 @@ async function extendVideoWithHold({
     }
 }
 
-async function extractFrameFromYouTube(videoId: string, timestampSeconds: number): Promise<ExtractedFrameImage> {
+async function extractFrameFromYouTubeViaPython(videoId: string, timestampSeconds: number): Promise<ExtractedFrameImage> {
     const scriptPath = path.join(process.cwd(), "scripts", "extract_yt_frame.py");
     const args = [
         scriptPath,
@@ -639,6 +639,44 @@ async function extractFrameFromYouTube(videoId: string, timestampSeconds: number
             }
         });
     });
+}
+
+async function extractFrameFromThumbnail(videoId: string): Promise<ExtractedFrameImage> {
+    const candidates = [
+        `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
+        `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`,
+        `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+    ];
+
+    for (const url of candidates) {
+        try {
+            const response = await fetch(url, { cache: "no-store" });
+            if (!response.ok) continue;
+            const bytes = Buffer.from(await response.arrayBuffer());
+            if (bytes.length === 0) continue;
+
+            return {
+                mimeType: response.headers.get("content-type") || "image/jpeg",
+                imageBytes: bytes.toString("base64"),
+            };
+        } catch {
+            // Try next thumbnail candidate.
+        }
+    }
+
+    throw new Error("Failed to fetch fallback thumbnail frame.");
+}
+
+async function extractFrameFromYouTube(videoId: string, timestampSeconds: number): Promise<ExtractedFrameImage> {
+    try {
+        return await extractFrameFromYouTubeViaPython(videoId, timestampSeconds);
+    } catch (error) {
+        console.warn(
+            `Falling back to thumbnail frame for ${videoId} at ${timestampSeconds.toFixed(2)}s:`,
+            toErrorMessage(error)
+        );
+        return await extractFrameFromThumbnail(videoId);
+    }
 }
 
 function buildOutputGcsUri(videoId: string, timestampSeconds: number, productId: string) {
