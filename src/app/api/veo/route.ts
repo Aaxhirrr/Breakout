@@ -787,7 +787,8 @@ export async function POST(req: Request) {
     const resolution = typeof body.resolution === "string" && body.resolution.trim().length > 0
         ? body.resolution.trim()
         : DEFAULT_RESOLUTION;
-    const requestedSeed = typeof body.seed === "number" && Number.isFinite(body.seed)
+    const useVertex = process.env.GOOGLE_GENAI_USE_VERTEXAI === "true";
+    const requestedSeed = useVertex && typeof body.seed === "number" && Number.isFinite(body.seed)
         ? Math.floor(Math.abs(body.seed))
         : null;
     const seedToken = requestedSeed === null ? "auto" : String(requestedSeed);
@@ -909,7 +910,7 @@ export async function POST(req: Request) {
                                         mimeType: middleFrame!.mimeType,
                                         imageBytes: middleFrame!.imageBytes,
                                     },
-                                    seed: seedBase,
+                                    ...(requestedSeed === null ? {} : { seed: seedBase }),
                                     outputGcsUri: effectiveOutputGcsUri ? `${effectiveOutputGcsUri}/part-1` : undefined,
                                 },
                             }),
@@ -930,7 +931,7 @@ export async function POST(req: Request) {
                                         mimeType: lastFrame.mimeType,
                                         imageBytes: lastFrame.imageBytes,
                                     },
-                                    seed: (seedBase + 1) % 1_000_000_000,
+                                    ...(requestedSeed === null ? {} : { seed: (seedBase + 1) % 1_000_000_000 }),
                                     outputGcsUri: effectiveOutputGcsUri ? `${effectiveOutputGcsUri}/part-2` : undefined,
                                 },
                             }),
@@ -987,7 +988,7 @@ export async function POST(req: Request) {
                                     mimeType: lastFrame.mimeType,
                                     imageBytes: lastFrame.imageBytes,
                                 },
-                                seed: seedBase,
+                                ...(requestedSeed === null ? {} : { seed: seedBase }),
                                 outputGcsUri: effectiveOutputGcsUri,
                             },
                         });
