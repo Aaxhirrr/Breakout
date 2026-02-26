@@ -21,6 +21,7 @@ import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
 import { cn } from "@/lib/utils";
 import { AuthGate } from "@/components/auth-gate";
+import { Analytics } from "@vercel/analytics/next";
 
 export default function RootLayout({
   children,
@@ -45,6 +46,7 @@ export default function RootLayout({
             </main>
           </div>
         </AuthGate>
+        <Analytics />
       </body>
     </html>
   );
